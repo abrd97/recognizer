@@ -1,0 +1,4 @@
+torch
+torchvision
+pyrealsense2
+numpy
