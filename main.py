@@ -1,6 +1,7 @@
 import os
 import torch
 import numpy as np
+import cv2
 import torchvision.transforms as transforms
 import torchvision.models as models
 from PIL import Image
@@ -8,7 +9,7 @@ import pyrealsense2 as rs
 
 def load_custom_model(model_path):
     model = models.resnet50()
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.fc = torch.nn.Linear(model.fc.in_features, 1)
     model.load_state_dict(torch.load(model_path))
     model.eval()
@@ -62,20 +63,23 @@ def capture_image():
     
     try:
         frames = pipeline.wait_for_frames()
-        frame = frames.get_color_frame()
+        # frame = frames.get_color_frame()
+        frame = frames.get_depth_frame()
+
         
         if not frame:
             raise RuntimeError("Could not capture an image from the camera.")
         
         image_data = np.asanyarray(frame.get_data())
-        image = Image.fromarray(image_data)
-        return image
+        image_data = cv2.applyColorMap(cv2.convertScaleAbs(image_data, alpha=0.03), cv2.COLORMAP_JET)
+        cv2.imwrite(os.path.join("images", "img.png"), image_data)
+        return os.path.join("images", "img.png")
     
     finally:
         pipeline.stop()
 
 def main():
-    test_image = "./test/gt_2024-09-18_17-00-47_74.png"
+    # test_image = "./test/gt_2024-09-18_17-00-47_74.png"
     model_path = 'model/best_model_depth.pth'
     vertical_lines = [520, 600, 680, 760]  # Vertical (x) positions
     horizontal_lines = [160, 240, 320, 400, 480, 560]  # Horizontal (y) positions
@@ -83,13 +87,12 @@ def main():
     preprocess = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
-    # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
 
     model = load_custom_model(model_path)
     
-    # image = capture_image()
-    image = load_image_from_path(test_image)
+    path = capture_image()
+    image = load_image_from_path(path)
     
     classifications = split_and_classify(image, vertical_lines, horizontal_lines, model, preprocess)
     
