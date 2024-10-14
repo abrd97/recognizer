@@ -103,7 +103,7 @@ def split_and_classify(model, image, vertical_lines, horizontal_lines):
 
     return classifications
 
-@app.get("/get_depth_image")
+@app.get("/depth_image")
 def get_depth_image():
     try:
         base64_image = capture_depth_image()
@@ -113,7 +113,7 @@ def get_depth_image():
         return {"error": str(e)}
     
     
-@app.post("/glas_config")
+@app.post("/config")
 async def glass_config(image: str = Form(...)):
     global model
     image_data = base64.b64decode(image)
@@ -126,12 +126,7 @@ async def glass_config(image: str = Form(...)):
     
     img = load_image_from_path(file_path)
     classifications = split_and_classify(model, img, VERTICAL_LINES, HORIZONTAL_LINES)
-    indices = [index for index, value in enumerate(classifications) if value > 0.5]     # give only indices if classified over 50%
-    indices = [index + 1 for index in indices]                                          # Begin index with 1
-    
-    print("----")
-    print(indices)
-    print("----")
+    indices = [index + 1 for index, value in enumerate(classifications) if value > 0.5]     # give only indices if classified over 50%
     
     return [{"x": position_map[i][0], "y": position_map[i][1]} for i in indices]
     
